@@ -4,17 +4,25 @@ import type React from "react"
 
 import { useState } from "react"
 import { Mail, Lock, Eye, EyeOff, Package, ImageIcon, Shield, Clock } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { createClient } from "@/lib/supabase/client"
 
 interface LoginFormProps {
   onSwitchToRegister: () => void
+  onSwitchToForgot: () => void
 }
 
-export default function LoginForm({ onSwitchToRegister }: LoginFormProps): React.ReactNode {
+export default function LoginForm({ onSwitchToRegister, onSwitchToForgot }: LoginFormProps): React.ReactNode {
   const [email, setEmail] = useState<string>("")
   const [password, setPassword] = useState<string>("")
   const [showPassword, setShowPassword] = useState<boolean>(false)
   const [remember, setRemember] = useState<boolean>(false)
   const [isLoading, setIsLoading] = useState<boolean>(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+  const router = useRouter()
+  const supabase = createClient()
+
 
   const isValid: boolean = email.trim().length > 2 && password.length >= 6
 
@@ -23,12 +31,20 @@ export default function LoginForm({ onSwitchToRegister }: LoginFormProps): React
     if (!isValid) return
 
     setIsLoading(true)
-    try {
-      // Simulate form submission
-      await new Promise((resolve) => setTimeout(resolve, 500))
-      console.log("Login attempted:", { email, password, remember })
-    } finally {
-      setIsLoading(false)
+    setErrorMessage(null)
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email,
+      password: password,
+    })
+
+    setIsLoading(false)
+
+    if (error) {
+      setErrorMessage(error.message)
+    } else {
+      router.push("/dashboard")
+      router.refresh()
     }
   }
 
@@ -104,12 +120,19 @@ export default function LoginForm({ onSwitchToRegister }: LoginFormProps): React
                     <label htmlFor="password" className="block text-sm text-white/80">
                       Password
                     </label>
-                    <a
+                    {/* <a
                       href="#"
                       className="text-xs text-blue-300/80 hover:text-blue-300 underline-offset-4 transition-colors hover:underline"
                     >
                       Forgot?
-                    </a>
+                    </a> */}
+                    <button
+                      type="button"
+                      onClick={onSwitchToForgot}
+                      className="text-xs text-blue-300/80 hover:text-blue-300 underline-offset-4 transition-colors hover:underline"
+                    >
+                      Forgot?
+                    </button>
                   </div>
                   <div className="group/input relative flex items-center rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 transition-all hover:border-white/20 focus-within:border-white/25 focus-within:bg-white/[0.07]">
                     <Lock className="mr-2 h-4.5 w-4.5 text-white/60" />
@@ -168,6 +191,13 @@ export default function LoginForm({ onSwitchToRegister }: LoginFormProps): React
                     Need help?
                   </a>
                 </div>
+
+                {/* 5. RENDER ERROR MESSAGE */}
+                {errorMessage && (
+                  <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-center text-sm text-red-400">
+                    {errorMessage}
+                  </div>
+                )}
 
                 {/* Divider */}
                 <div className="my-2 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>

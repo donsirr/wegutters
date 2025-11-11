@@ -2,7 +2,8 @@
 
 import type React from "react"
 import { useState } from "react"
-import { Mail, Lock, Eye, EyeOff, Package, Shield, Clock, User } from "lucide-react"
+import { Mail, Lock, Eye, EyeOff, Package, User } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
 
 interface PasswordStrength {
     minLength: boolean
@@ -23,6 +24,11 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps): Re
     const [isLoading, setIsLoading] = useState<boolean>(false)
     const [agreedToTerms, setAgreedToTerms] = useState<boolean>(false)
 
+    const [errorMessage, setErrorMessage] = useState<string | null>(null)
+    const [successMessage, setSuccessMessage] = useState<string | null>(null)
+
+    const supabase = createClient()
+
     const passwordStrength: PasswordStrength = {
         minLength: password.length > 8,
         hasNumber: /\d/.test(password),
@@ -42,12 +48,32 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps): Re
         if (!isFormValid) return
 
         setIsLoading(true)
-        try {
-            // Simulate form submission
-            await new Promise((resolve) => setTimeout(resolve, 500))
-            console.log("Registration attempted:", { firstName, lastName, email, password })
-        } finally {
-            setIsLoading(false)
+        setErrorMessage(null)
+        setSuccessMessage(null)
+
+        const { data, error } = await supabase.auth.signUp({
+            email: email,
+            password: password,
+            options: {
+                data: {
+                    first_name: firstName,
+                    last_name: lastName,
+                },
+                emailRedirectTo: `${location.origin}/auth/callback`,
+            },
+        })
+
+        setIsLoading(false)
+
+        if (error) {
+            setErrorMessage(error.message)
+        } else if (data.user) {
+            setSuccessMessage("Account created! Please check your email to confirm.")
+            setFirstName("")
+            setLastName("")
+            setEmail("")
+            setPassword("")
+            setAgreedToTerms(false)
         }
     }
 
@@ -237,6 +263,21 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps): Re
                                         </a>
                                     </span>
                                 </label>
+
+                                {/* 4. RENDER MESSAGES HERE */}
+                                {errorMessage && (
+                                    <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-center text-sm text-red-400">
+                                        {errorMessage}
+                                    </div>
+                                )}
+                                {successMessage && (
+                                    <div className="rounded-lg border border-green-500/30 bg-green-500/10 p-3 text-center text-sm text-green-400">
+                                        {successMessage}
+                                    </div>
+                                )}
+
+                                {/* Divider */}
+                                <div className="my-2 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
 
                                 {/* Divider */}
                                 <div className="my-2 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>

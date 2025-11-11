@@ -1,6 +1,18 @@
 import AuthContainer from "@/components/auth-container"
+import { createClient } from "@/lib/supabase/server"
+import { redirect } from "next/navigation"
 
-export default function Home() {
+export default async function Home() {
+  const supabase = await createClient()
+  
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+
+  if (session) {
+    redirect("/dashboard")
+  }
+  
   return (
     <div className="relative min-h-screen text-white antialiased selection:bg-white/20 selection:text-white overflow-auto">
       <img
